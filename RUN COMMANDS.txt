@@ -1,0 +1,15 @@
+if run for the very first time : 
+    git clone https://github.com/idkeeee/PracSoft-BigData_GroupProject.git
+    cd PracSoft-BigData_GroupProject
+
+
+
+pull : 
+    git pull
+
+
+
+push : 
+    git add .
+    git commit -m "my balls are itchy"
+    git push
