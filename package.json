@@ -1,0 +1,26 @@
+{
+  "name": "pracsoft-bigdata_groupproject",
+  "version": "1.0.0",
+  "description": "��#\u0000 \u0000P\u0000r\u0000a\u0000c\u0000S\u0000o\u0000f\u0000t\u0000-\u0000B\u0000i\u0000g\u0000D\u0000a\u0000t\u0000a\u0000_\u0000G\u0000r\u0000o\u0000u\u0000p\u0000P\u0000r\u0000o\u0000j\u0000e\u0000c\u0000t\u0000\r\u0000 \u0000",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server/server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/idkeeee/PracSoft-BigData_GroupProject.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/idkeeee/PracSoft-BigData_GroupProject/issues"
+  },
+  "homepage": "https://github.com/idkeeee/PracSoft-BigData_GroupProject#readme",
+  "dependencies": {
+    "express": "^5.2.1",
+    "ws": "^8.21.3"
+  }
+}
