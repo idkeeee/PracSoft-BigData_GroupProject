@@ -1,3 +1,9 @@
+require('dotenv').config();
+const { createClient } = require('@supabase/supabase-js');
+
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
@@ -17,7 +23,7 @@ wss.on('connection', (ws) => {
 
     let username = null;
 
-    ws.on('message', (message) => {
+    ws.on('message', async (message) => {
         const data = JSON.parse(message);
 
         if (data.type === 'register') {
@@ -32,13 +38,30 @@ wss.on('connection', (ws) => {
         }
 
         if (data.type === 'message') {
+            const { data: savedMessage, error } = await supabase
+                .from('messages')
+                .inser([
+                    {
+                        conversation_id: data.conversation_id,
+                        sender_id: username,
+                        content: data.message
+                    }
+                ])
+                .select();
+            
+            if (error) {
+                console.error('Database error:', error);
+                ws.send(JSON.stringify({ type: 'error', message: 'Failed to save message' }));
+                return;
+            }
+
             const recipient = clients.get(data.to);
             if (recipient) {
                 recipient.send(JSON.stringify({
                     type: 'message',
                     from: username,
                     message: data.message,
-                    timestamp: new Date().toISOString()
+                    timestamp: savedMessage[0].created_at
                 }));
             }
         }
