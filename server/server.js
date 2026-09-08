@@ -15,6 +15,7 @@ const wss = new WebSocket.Server({ server });
 
 app.use(express.static(path.join(__dirname, '../client')));
 
+// Still use JavaScript to map clients. NOT YET SUPABASE CONNECTED for any schemas
 const clients = new Map();
 const conversations = new Map();
 
