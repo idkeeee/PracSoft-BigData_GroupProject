@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>IM Prototype</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!--Login Code-->
+  <div id="login-screen">
+    <h1>IM Prototype</h1>
+    <input id="username-input" type="text" placeholder="Choose a username" />
+    <button id="connect-btn">Connect</button>
+    <p id="login-error" class="error"></p>
+  </div>
+
+  <!--Main Code-->
+  <div id="app" class="hidden">
+
+    <div id="sidebar">
+      <div id="online-users-panel">
+        <h2>Online</h2>
+        <ul id="online-users-list"></ul>
+      </div>
+
+      <div id="conversations-panel">
+        <h2>My Conversations</h2>
+        <button id="new-conversation-btn">+ New Conversation</button>
+        <div id="join-conversation-row">
+          <input id="join-conversation-input" type="text" placeholder="Conversation ID" />
+          <button id="join-conversation-btn">Join</button>
+        </div>
+        <ul id="conversation-tabs"></ul>
+      </div>
+    </div>
+
+    <div id="main-panel">
+      <div id="active-conversation-header">
+        <span id="active-conversation-title">No conversation selected</span>
+        <span id="active-conversation-members"></span>
+        <button id="leave-conversation-btn" class="hidden">Leave</button>
+      </div>
+
+      <div id="message-history"></div>
+
+      <form id="message-input-form">
+        <input id="message-input" type="text" placeholder="Type a message..." autocomplete="off" />
+        <button type="submit">Send</button>
+      </form>
+    </div>
+
+  </div>
+
+  <script src="client.js"></script>
+</body>
+</html>
