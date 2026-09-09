@@ -15,10 +15,9 @@ const wss = new WebSocket.Server({ server });
 
 app.use(express.static(path.join(__dirname, '../client')));
 
-// Still use JavaScript to map clients. NOT YET SUPABASE CONNECTED for any schemas
-const clients = new Map();
+// Map to track active clients and their database UUIDs
+const clients = new Map(); 
 const conversations = new Map();
-
 
 function send(ws, payload) {
     if (ws && ws.readyState === WebSocket.OPEN) {
@@ -33,8 +32,10 @@ function sendError(ws, message) {
 function broadcastUserList() {
     const users = Array.from(clients.keys());
     const payload = JSON.stringify({ type: 'user_list', users });
-    for (const ws of clients.values()) {
-        if (ws.readyState === WebSocket.OPEN) ws.send(payload);
+    for (const clientData of clients.values()) {
+        if (clientData.ws.readyState === WebSocket.OPEN) {
+            clientData.ws.send(payload);
+        }
     }
 }
 
@@ -42,7 +43,7 @@ function broadcastMemberUpdate(conversationId) {
     const members = Array.from(conversations.get(conversationId) || []);
     const payload = { type: 'member_update', conversationId, members };
     for (const username of members) {
-        send(clients.get(username), payload);
+        send(clients.get(username).ws, payload);
     }
 }
 
@@ -53,7 +54,6 @@ function requireRegistered(ws) {
     }
     return true;
 }
-
 
 wss.on('connection', (ws) => {
     console.log('New client connected');
@@ -85,6 +85,9 @@ wss.on('connection', (ws) => {
                 case 'send_message':
                     await handleSendMessage(ws, data);
                     break;
+                case 'fetch_history':
+                    await handleFetchHistory(ws, data);
+                    break;
                 default:
                     sendError(ws, `Unknown message type: ${data.type}`);
             }
@@ -108,7 +111,6 @@ wss.on('connection', (ws) => {
     });
 });
 
-
 async function handleRegister(ws, data) {
     const username = (data.username || '').trim();
     if (!username) {
@@ -119,8 +121,30 @@ async function handleRegister(ws, data) {
         sendError(ws, 'Username taken.');
         return;
     }
+
+    // Check if user exists in Supabase
+    let { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('username', username)
+        .single();
+
+    // Create user if they do not exist
+    if (userError && userError.code === 'PGRST116') {
+        const { data: newUser, error: insertError } = await supabase
+            .from('users')
+            .insert([{ username: username }])
+            .select()
+            .single();
+
+        if (insertError) throw insertError;
+        userData = newUser;
+    }
+
     ws.username = username;
-    clients.set(username, ws);
+    // Store both the WebSocket and the database UUID
+    clients.set(username, { ws: ws, id: userData.id }); 
+    
     send(ws, { type: 'registered', username });
     broadcastUserList();
 }
@@ -148,6 +172,7 @@ async function handleCreateConversation(ws) {
 async function handleJoinConversation(ws, data) {
     if (!requireRegistered(ws)) return;
     const { conversationId } = data;
+    
     if (!conversationId) {
         sendError(ws, 'join_conversation requires a conversationId.');
         return;
@@ -160,7 +185,7 @@ async function handleJoinConversation(ws, data) {
 
     const { data: history, error } = await supabase
         .from('messages')
-        .select('*')
+        .select('content, created_at, users (username)')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true });
 
@@ -193,8 +218,23 @@ function handleLeaveConversation(ws, data) {
 async function handleSendMessage(ws, data) {
     if (!requireRegistered(ws)) return;
     const { conversationId, content } = data;
+
+    // Input validation
     if (!conversationId || !content) {
         sendError(ws, 'send_message requires conversationId and content.');
+        return;
+    }
+    if (typeof content !== 'string') {
+        sendError(ws, 'Invalid message format.');
+        return;
+    }
+    const cleanMessage = content.trim();
+    if (cleanMessage.length === 0) {
+        sendError(ws, 'Message cannot be empty.');
+        return;
+    }
+    if (cleanMessage.length > 512) {
+        sendError(ws, 'Message exceeds 512 character limit.');
         return;
     }
 
@@ -204,13 +244,16 @@ async function handleSendMessage(ws, data) {
         return;
     }
 
+    const senderData = clients.get(ws.username);
+
+    // Save to database using the user's UUID
     const { data: saved, error } = await supabase
         .from('messages')
         .insert([
             {
                 conversation_id: conversationId,
-                sender_id: ws.username,
-                content,
+                sender_id: senderData.id, 
+                content: cleanMessage,
             },
         ])
         .select()
@@ -226,12 +269,47 @@ async function handleSendMessage(ws, data) {
         type: 'new_message',
         conversationId,
         senderId: ws.username,
-        content,
+        content: cleanMessage,
         createdAt: saved.created_at,
     };
+    
     for (const username of members) {
-        send(clients.get(username), payload);
+        send(clients.get(username).ws, payload);
     }
+}
+
+async function handleFetchHistory(ws, data) {
+    if (!requireRegistered(ws)) return;
+    const { conversationId } = data;
+
+    // Use default conversation if none is provided
+    const targetConversation = conversationId || '10bd6650-3ae5-4a44-803e-c16c80ca4611';
+
+    const { data: history, error } = await supabase
+        .from('messages')
+        .select('content, created_at, users (username)')
+        .eq('conversation_id', targetConversation)
+        .order('created_at', { ascending: true })
+        .limit(50);
+    
+    if (error) {
+        console.error('History fetch error:', error);
+        sendError(ws, 'Failed to load history.');
+        return;
+    }
+
+    const formattedHistory = history.map(msg => ({
+        type: 'message',
+        from: msg.users.username,
+        message: msg.content,
+        timestamp: msg.created_at,
+        isHistory: true
+    }));
+
+    send(ws, { 
+        type: 'history', 
+        messages: formattedHistory 
+    });
 }
 
 const PORT = process.env.PORT || 3000;
