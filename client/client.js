@@ -48,8 +48,8 @@ function renderLoginError(message) {
 }
 
 function renderLoggedIn() {
-  el.loginScreen.classList.add('hidden');
-  el.app.classList.remove('hidden');
+  el.loginScreen.classList.add('is-hidden');
+  el.app.classList.remove('is-hidden');
 }
 
 function renderOnlineUsers() {
@@ -77,7 +77,7 @@ function renderActiveConversation() {
   if (!id) {
     el.activeTitle.textContent = 'No conversation selected';
     el.activeMembers.textContent = '';
-    el.leaveBtn.classList.add('hidden');
+    el.leaveBtn.classList.add('is-hidden');
     el.messageHistory.innerHTML = '';
     return;
   }
@@ -85,7 +85,7 @@ function renderActiveConversation() {
   const convo = state.conversations.get(id);
   el.activeTitle.textContent = `Conversation ${id}`;
   el.activeMembers.textContent = `Members: ${convo.members.join(', ')}`;
-  el.leaveBtn.classList.remove('hidden');
+  el.leaveBtn.classList.remove('is-hidden');
 
   el.messageHistory.innerHTML = '';
   for (const msg of convo.messages) {
@@ -125,8 +125,8 @@ function connect(username) {
 
   ws.addEventListener('close', () => {
     renderLoginError('Disconnected from server.');
-    el.app.classList.add('hidden');
-    el.loginScreen.classList.remove('hidden');
+    el.app.classList.add('is-hidden');
+    el.loginScreen.classList.remove('is-hidden');
   });
 
   ws.addEventListener('error', () => {
@@ -159,6 +159,13 @@ function handleServerMessage(data) {
     case 'user_list':
       state.onlineUsers = data.users;
       renderOnlineUsers();
+      break;
+    
+    case 'my_conversations':
+      // Automatically join all past conversations to load their history
+      for (const conversationId of data.conversationIds) {
+        send({ type: 'join_conversation', conversationId });
+      }
       break;
 
     case 'conversation_created':

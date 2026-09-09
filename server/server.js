@@ -6,7 +6,7 @@ const WebSocket = require('ws');
 const path = require('path');
 
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const app = express();
@@ -118,8 +118,10 @@ async function handleRegister(ws, data) {
         return;
     }
     if (clients.has(username)) {
-        sendError(ws, 'Username taken.');
-        return;
+        const oldClient = clients.get(username);
+        send(oldClient.ws, { type: 'error', message: 'You have been logged in from another device.'});
+        oldClient.ws.close();
+        clients.delete(username);
     }
 
     // Check if user exists in Supabase
@@ -143,14 +145,27 @@ async function handleRegister(ws, data) {
 
     ws.username = username;
     // Store both the WebSocket and the database UUID
-    clients.set(username, { ws: ws, id: userData.id }); 
+    clients.set(username, 
+        { ws: ws, id: userData.id, lastMessageTime: 0 }); 
     
     send(ws, { type: 'registered', username });
+
+    const { data: memberships, error: memberError} = await supabase
+        .from('conversation_members')
+        .select('conversation_id')
+        .eq('user_id', userData.id)
+    if (!memberError && memberships && memberships.length > 0) {
+        const conversationIds = memberships.map(m => m.conversation_id);
+        send(ws, { type: 'my_conversations', conversationIds });
+    }
+
     broadcastUserList();
 }
 
 async function handleCreateConversation(ws) {
     if (!requireRegistered(ws)) return;
+
+    const clientData = clients.get(ws.username);
 
     const { data: row, error } = await supabase
         .from('conversations')
@@ -165,6 +180,10 @@ async function handleCreateConversation(ws) {
     }
 
     const conversationId = row.id;
+
+    await supabase
+        .from('conversation_members')
+        .insert([{ conversation_id: conversationId, user_id: clientData.id }]);
     conversations.set(conversationId, new Set([ws.username]));
     send(ws, { type: 'conversation_created', conversationId });
 }
@@ -181,6 +200,16 @@ async function handleJoinConversation(ws, data) {
     if (!conversations.has(conversationId)) {
         conversations.set(conversationId, new Set());
     }
+
+    const clientData = clients.get(ws.username);
+
+    await supabase
+        .from('conversation_members')
+        .upsert(
+            [{ conversation_id: conversationId, user_id: clientData.id }],
+            { onConflict: 'conversation_id, user_id' }
+        );
+
     conversations.get(conversationId).add(ws.username);
 
     const { data: history, error } = await supabase
@@ -224,6 +253,16 @@ function handleLeaveConversation(ws, data) {
 async function handleSendMessage(ws, data) {
     if (!requireRegistered(ws)) return;
     const { conversationId, content } = data;
+
+    const clientData = clients.get(ws.username);
+    const now = Date.now();
+
+    if (now - clientData.lastMessageTime < 500) {
+        sendError(ws, 'You are sending messages too quickly. Please slow down.');
+        return;
+    }
+
+    clientData.lastMessageTime = now;
 
     // Input validation
     if (!conversationId || !content) {
