@@ -195,11 +195,17 @@ async function handleJoinConversation(ws, data) {
         return;
     }
 
+    const formattedHistory = history.map(msg => ({
+        senderId: msg.users ? msg.users.username : 'Unknown',
+        content: msg.content,
+        created_at: msg.created_at
+    }));
+
     send(ws, {
         type: 'conversation_joined',
         conversationId,
         members: Array.from(conversations.get(conversationId)),
-        history,
+        history: formattedHistory,
     });
 
     broadcastMemberUpdate(conversationId);
