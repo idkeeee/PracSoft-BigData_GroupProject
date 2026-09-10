@@ -13,7 +13,8 @@ const {
     handleCreateConversation,
     handleJoinConversation,
     handleLeaveConversation,
-    handleSendMessage
+    handleSendMessage,
+    handleStartDM,
 } = require('./handler');
 
 const app = express();

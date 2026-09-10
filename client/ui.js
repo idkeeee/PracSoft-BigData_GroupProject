@@ -34,7 +34,7 @@ export function renderOnlineUsers(users, onlineUsersSet) {
     li.className = 'user-list-item';
     li.dataset.username = user;
     li.addEventListener('click', () => {
-        if (isOnline && user !== window.state.username) {
+        if (user !== window.state.username) {
             window.send({ type: 'start_dm', targetUsername: user });
         }
     });

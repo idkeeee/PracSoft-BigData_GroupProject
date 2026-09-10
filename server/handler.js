@@ -27,7 +27,11 @@ function broadcastMemberUpdate(conversationId) {
     const members = Array.from(conversations.get(conversationId) || []);
     const payload = { type: 'member_update', conversationId, members };
     for (const username of members) {
-        send(clients.get(username).ws, payload);
+        const client = clients.get(username);
+        // SAFE CHECK: Only send if the user is currently online and has a valid ws
+        if (client && client.ws) {
+            send(client.ws, payload);
+        }
     }
 }
 
@@ -256,7 +260,10 @@ async function handleSendMessage(ws, data) {
     };
     
     for (const username of members) {
-        send(clients.get(username).ws, payload);
+        const client = clients.get(username);
+        if (client && client.ws) {
+            send(client.ws, payload);
+        }
     }
 }
 
@@ -269,7 +276,7 @@ async function handleFetchHistory(ws, data) {
 
     const { data: history, error } = await supabase
         .from('messages')
-        .select('content, created_at, users (username)')
+        .select('content, created_at, users!sender_id (username)')
         .eq('conversation_id', targetConversation)
         .order('created_at', { ascending: true })
         .limit(50);
@@ -303,46 +310,64 @@ async function handleStartDM(ws, data) {
         return;
     }
 
-    const targetClient = clients.get(targetUsername)
-    if (!targetClient) {
-        sendError(ws, 'User is currently offline.');
+    const currentUserData = clients.get(ws.username);
+
+    const { data: targetUserData, error: targetError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('username', targetUsername)
+        .single();
+
+    if (targetError || !targetUserData) {
+        sendError(ws, 'User not found in database.');
         return;
     }
 
-    const currentUserData = clients.get(ws.username);
+    const currentUserId = currentUserData.id;
+    const targetUserId = targetUserData.id;
 
-    const { data: conversationsList, error } = await supabase
-        .from('conversations')
-        .select(`
-            id,
-            conversation_members (user_id)
-        `);
+    const { data: memberRows, error: memberError } = await supabase
+        .from('conversation_members')
+        .select('conversation_id')
+        .in('user_id', [currentUserId, targetUserId]);
     
-    if (error) {
-        console.error('Supabase error finding DM:', error);
-        sendError(ws, 'Failed to find or create conversation.');
+    if (memberError) {
+        console.error('Supabase error finding DM:', memberError);
+        sendError(ws, 'Failed to find conversation.');
         return;
+    }
+
+    const convoCounts = {};
+    for (const row of memberRows) {
+        convoCounts[row.conversation_id] = (convoCounts[row.conversation_id] || 0) + 1;
     }
 
     let existingConversationId = null;
-
-    for (const convo of conversationsList) {
-        const memberIds = convo.conversation_members.map(m => m.user_id);
-        if (memberIds.length === 2 && 
-            memberIds.includes(currentUserData.id) && 
-            memberIds.includes(targetClient.id)) {
-            existingConversationId = convo.id;
+    for (const [convoId, count] of Object.entries(convoCounts)) {
+        if (count === 2) {
+            existingConversationId = convoId;
             break;
         }
     }
 
     if (existingConversationId) {
         conversations.set(existingConversationId, new Set([ws.username, targetUsername]));
+        const { data: history } = await supabase
+            .from('messages')
+            .select(`content, created_at, users!sender_id (username)`)
+            .eq('conversation_id', existingConversationId)
+            .order('created_at', { ascending: true });
+            
+        const formattedHistory = (history || []).map(msg => ({
+            senderId: msg.users ? msg.users.username : 'Unknown',
+            content: msg.content,
+            created_at: msg.created_at
+        }));
         send(ws, {
             type: 'conversation_joined', 
             conversationId: existingConversationId,
             members: [ws.username, targetUsername],
-            history: [] 
+            history: formattedHistory
         });
         broadcastMemberUpdate(existingConversationId);
     } else {
@@ -358,12 +383,12 @@ async function handleStartDM(ws, data) {
             return;
         }
 
-         const newConvoId = newRow.id;
+        const newConvoId = newRow.id;
         await supabase
             .from('conversation_members')
             .insert([
-                { conversation_id: newConvoId, user_id: currentUserData.id },
-                { conversation_id: newConvoId, user_id: targetClient.id }
+                { conversation_id: newConvoId, user_id: currentUserId },
+                { conversation_id: newConvoId, user_id: targetUserId }
             ]);
 
         conversations.set(newConvoId, new Set([ws.username, targetUsername]));
