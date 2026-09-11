@@ -4,7 +4,8 @@ import { renderLoginError, renderLoggedIn, renderOnlineUsers, renderConversation
 let ws = null;
 
 export function connect(username) {
-  ws = new WebSocket(`ws://${window.location.host}`);
+  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${protocol}://${window.location.host}`);
 
   ws.addEventListener('open', () => {
     send({ type: 'register', username });
