@@ -1,3 +1,5 @@
 SUPABASE_URL =  https://jqfdycqhpnqpowkrqjna.supabase.co
 
 SUPABASE_PUBLISHABLE_KEY = sb_publishable_DVUC2_u71UojxpBG0IZO-Q_F78Udhb9
+
+LINK :  https://idkeeee.github.io/PracSoft-BigData_GroupProject/
