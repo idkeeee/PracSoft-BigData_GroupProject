@@ -44,17 +44,38 @@ export function renderOnlineUsers(users, onlineUsersSet) {
 
 export function renderConversationTabs() {
   el.conversationTabs.innerHTML = '';
-  for (const [conversationId, convo] of window.state.conversations) {
+
+  const conversations =
+    [...window.state.conversations.entries()];
+
+  // Put the mandatory Everyone room at the top.
+  conversations.sort(
+    ([, a], [, b]) =>
+      Number(b.isGlobal) - Number(a.isGlobal)
+  );
+
+  for (const [conversationId, convo] of conversations) {
     const li = document.createElement('li');
     const unread = window.state.unreadCounts.get(conversationId) || 0;
     const badge = unread > 0 ? `<span class="unread-badge">${unread}</span>` : '';
-    
-    li.innerHTML = `Conversation ${conversationId.substring(0, 8)}... ${badge}`;
+
+    let title;
+
+    if (convo.isGlobal) {
+      title = 'Everyone';
+    } else if (convo.name) {
+      title = convo.name;
+    } else {
+      title = `Conversation ${conversationId.substring(0, 8)}...`;
+    }
+
+    li.innerHTML = `${title} ${badge}`;
     li.className = conversationId === window.state.activeConversationId ? 'tab active' : 'tab';
     li.addEventListener('click', () => window.setActiveConversation(conversationId));
     el.conversationTabs.appendChild(li);
   }
 }
+
 
 export function renderActiveConversation() {
   const id = window.state.activeConversationId;
@@ -66,10 +87,20 @@ export function renderActiveConversation() {
     return;
   }
 
-  const convo = window.state.conversations.get(id)
-  el.activeTitle.textContent = `Conversation ${id.substring(0, 8)}...`;
-  el.activeMembers.textContent = `Members: ${convo.members.join(', ')}`;
-  el.leaveBtn.classList.remove('is-hidden');
+  const convo = window.state.conversations.get(id);
+
+  if (convo.isGlobal) {
+    el.activeTitle.textContent = 'Everyone';
+    el.activeMembers.textContent = `All users (${convo.members.length})`;
+
+    // Mandatory room: no Leave button.
+    el.leaveBtn.classList.add('is-hidden');
+  } else {
+    el.activeTitle.textContent =
+      convo.name || `Conversation ${id.substring(0, 8)}...`;
+    el.activeMembers.textContent = `Members: ${convo.members.join(', ')}`;
+    el.leaveBtn.classList.remove('is-hidden');
+  }
 
   el.messageHistory.innerHTML = '';
   for (const msg of convo.messages) {
@@ -85,6 +116,7 @@ export function renderActiveConversation() {
   }
   el.messageHistory.scrollTop = el.messageHistory.scrollHeight;
 }
+
 
 export function renderAll() {
   renderOnlineUsers();

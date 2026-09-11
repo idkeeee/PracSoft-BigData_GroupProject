@@ -231,6 +231,19 @@ async function loadMyConversations() {
 
 async function loadConversation(conversationId) {
 
+    // Load conversation metadata so the UI can recognize the
+    // mandatory Everyone chat.
+    const {
+        data: conversationInfo,
+        error: conversationError
+    } = await supabase
+        .from('conversations')
+        .select('id, name, is_global')
+        .eq('id', conversationId)
+        .single();
+
+    if (conversationError) throw conversationError;
+
     // Load members
     const { data: memberRows, error: memberError } =
         await supabase
@@ -285,7 +298,9 @@ async function loadConversation(conversationId) {
         conversationId,
         {
             members,
-            messages: formattedMessages
+            messages: formattedMessages,
+            name: conversationInfo.name,
+            isGlobal: conversationInfo.is_global
         }
     );
 }
@@ -350,6 +365,15 @@ async function leaveConversation(conversationId) {
 
     if (!conversationId) return;
 
+    const conversation =
+        state.conversations.get(conversationId);
+
+    // The global Everyone room is mandatory.
+    if (conversation?.isGlobal) {
+        alert('The Everyone chat cannot be left.');
+        return;
+    }
+
     const { error } =
         await supabase
             .from('conversation_members')
@@ -370,6 +394,7 @@ async function leaveConversation(conversationId) {
     renderConversationTabs();
     renderActiveConversation();
 }
+
 
 
 // --------------------------------------------------
@@ -444,6 +469,12 @@ async function startDM(targetUsername) {
 
         const conversationId =
             membership.conversation_id;
+
+        // Never mistake the mandatory Everyone room for a DM,
+        // even when the whole app currently has only two users.
+        if (state.conversations.get(conversationId)?.isGlobal) {
+            continue;
+        }
 
         const { data: members } =
             await supabase
