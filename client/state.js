@@ -6,12 +6,48 @@ export const state = {
   unreadCounts: new Map()
 };
 
-export function addOrUpdateConversation(conversationId, { members, messages }) {
-  const existing = state.conversations.get(conversationId) || { members: [], messages: [] };
-  state.conversations.set(conversationId, {
-    members: members !== undefined ? members : existing.members,
-    messages: messages !== undefined ? messages : existing.messages,
-  });
+export function addOrUpdateConversation(
+  conversationId,
+  {
+    members,
+    messages,
+    name,
+    isGlobal
+  }
+) {
+
+  const existing =
+    state.conversations.get(conversationId) || {
+      members: [],
+      messages: [],
+      name: null,
+      isGlobal: false
+    };
+
+  state.conversations.set(
+    conversationId,
+    {
+      members:
+        members !== undefined
+          ? members
+          : existing.members,
+
+      messages:
+        messages !== undefined
+          ? messages
+          : existing.messages,
+
+      name:
+        name !== undefined
+          ? name
+          : existing.name,
+
+      isGlobal:
+        isGlobal !== undefined
+          ? isGlobal
+          : existing.isGlobal
+    }
+  );
 }
 
 export function appendMessage(conversationId, message) {
