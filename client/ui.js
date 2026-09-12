@@ -1,17 +1,18 @@
+import { state } from './state.js'
+
 export const el = {
   loginScreen: document.getElementById('login-screen'),
   loginError: document.getElementById('login-error'),
   usernameInput: document.getElementById('username-input'),
   app: document.getElementById('app'),
   onlineUsersList: document.getElementById('online-users-list'),
-  conversationTabs: document.getElementById('conversation-tabs'),
+  myChatsList: document.getElementById('my-chats-list'),
   activeTitle: document.getElementById('active-conversation-title'),
   activeMembers: document.getElementById('active-conversation-members'),
   leaveBtn: document.getElementById('leave-conversation-btn'),
   messageHistory: document.getElementById('message-history'),
   messageForm: document.getElementById('message-input-form'),
   messageInput: document.getElementById('message-input'),
-  joinInput: document.getElementById('join-conversation-input'),
 };
 
 export function renderLoginError(message) {
@@ -34,7 +35,7 @@ export function renderOnlineUsers(users, onlineUsersSet) {
     li.className = 'user-list-item';
     li.dataset.username = user;
     li.addEventListener('click', () => {
-        if (user !== window.state.username) {
+        if (user !== state.username) {
             window.send({ type: 'start_dm', targetUsername: user });
         }
     });
@@ -42,75 +43,61 @@ export function renderOnlineUsers(users, onlineUsersSet) {
   }
 }
 
-export function renderConversationTabs() {
-  el.conversationTabs.innerHTML = '';
+export function renderMyChats() {
+  el.myChatsList.innerHTML = '';
 
-  const conversations =
-    [...window.state.conversations.entries()];
-
-  // Put the mandatory Everyone room at the top.
-  conversations.sort(
-    ([, a], [, b]) =>
-      Number(b.isGlobal) - Number(a.isGlobal)
-  );
-
-  for (const [conversationId, convo] of conversations) {
+  for (const [conversationId, convo] of state.conversations) {
     const li = document.createElement('li');
     const unread = window.state.unreadCounts.get(conversationId) || 0;
     const badge = unread > 0 ? `<span class="unread-badge">${unread}</span>` : '';
 
-    let title;
+    let chatName = "Group Chat";
 
-    if (convo.isGlobal) {
-      title = 'Everyone';
-    } else if (convo.name) {
-      title = convo.name;
-    } else {
-      title = `Conversation ${conversationId.substring(0, 8)}...`;
+    if (convo.members.length === 2) {
+      chatName = convo.members.find(m => m !== state.username) || "Unknown";
     }
 
-    li.innerHTML = `${title} ${badge}`;
-    li.className = conversationId === window.state.activeConversationId ? 'tab active' : 'tab';
+    li.innerHTML = `<span>${chatName}</span> ${badge}`
+    li.className = conversationId === state.activeConversationId ? 'chat-item active' : 'chat-item';
+
     li.addEventListener('click', () => window.setActiveConversation(conversationId));
-    el.conversationTabs.appendChild(li);
+    el.myChatsList.appendChild(li);
   }
 }
 
 
 export function renderActiveConversation() {
-  const id = window.state.activeConversationId;
+  const id = state.activeConversationId;
   if (!id) {
-    el.activeTitle.textContent = 'No conversation selected';
+    el.activeTitle.textContent = 'Select chat';
     el.activeMembers.textContent = '';
     el.leaveBtn.classList.add('is-hidden');
-    el.messageHistory.innerHTML = '';
+    el.messageHistory.innerHTML = '<div class="has-text-centered has-text-grey mt-5">Select a user or chat to start messaging</div>';
     return;
   }
 
-  const convo = window.state.conversations.get(id);
+  const convo = state.conversations.get(id);
 
-  if (convo.isGlobal) {
-    el.activeTitle.textContent = 'Everyone';
-    el.activeMembers.textContent = `All users (${convo.members.length})`;
-
-    // Mandatory room: no Leave button.
-    el.leaveBtn.classList.add('is-hidden');
+  if (convo.members.length === 2) {
+    el.activeTitle.textContent = convo.members.find(m => m !== state.username) || "Unknown";
   } else {
-    el.activeTitle.textContent =
-      convo.name || `Conversation ${id.substring(0, 8)}...`;
-    el.activeMembers.textContent = `Members: ${convo.members.join(', ')}`;
-    el.leaveBtn.classList.remove('is-hidden');
+    el.activeTitle.textContent = "Group Chat";
   }
+
+  el.activeMembers.textContent = `Members: ${convo.members.join(', ')}`;
+  el.leaveBtn.classList.remove('is-hidden');
 
   el.messageHistory.innerHTML = '';
   for (const msg of convo.messages) {
     const div = document.createElement('div');
-    div.className = 'message';
-    const sender = msg.senderId || msg.sender_id;
+    div.className = `message ${msg.senderId === state.username ? 'message-sent' : 'message-received'}`;
     const timestamp = msg.createdAt || msg.created_at;
-    div.innerHTML = `<span class="sender">${sender}</span>
-                      <span class="time">${new Date(timestamp).toLocaleTimeString()}</span>
-                      <div class="content"></div>`;
+    
+    div.innerHTML = `
+      <span class="sender">${msg.senderId}</span>
+      <span class="time">${new Date(timestamp).toLocaleTimeString()}</span>
+      <div class="content"></div>
+    `;
     div.querySelector('.content').textContent = msg.content;
     el.messageHistory.appendChild(div);
   }
@@ -120,6 +107,6 @@ export function renderActiveConversation() {
 
 export function renderAll() {
   renderOnlineUsers();
-  renderConversationTabs();
+  renderMyChats();
   renderActiveConversation();
 }

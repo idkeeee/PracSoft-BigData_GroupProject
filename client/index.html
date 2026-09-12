@@ -3,74 +3,62 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Vestra Messaging</title>
-  <!-- Bulma CSS Framework -->
+  <title>Instant Messaging</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
-  <!-- FontAwesome for Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-  <!-- Custom Styles -->
   <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:;base64,iVBORw0KGgo=">
 </head>
 <body>
 
-  <!--Login Code-->
+  <!-- Login Screen -->
   <div id="login-screen" class="is-flex is-justify-content-center is-align-items-center">
     <div class="box login-box">
       <h1 class="title is-4 has-text-centered mb-5">
-        <i class="fas fa-comments mr-2"></i>Vestra Messaging
+        <i class="fas fa-comments mr-2"></i>Instant Messaging
       </h1>
       <div class="field">
         <div class="control has-icons-left">
           <input id="username-input" class="input is-medium" type="text" placeholder="Enter your username" autocomplete="off" />
-          <span class="icon is-small is-left">
-            <i class="fas fa-user"></i>
-          </span>
+          <span class="icon is-small is-left"><i class="fas fa-user"></i></span>
         </div>
       </div>
-      <button id="connect-btn" class="button is-primary is-medium is-fullwidth">
-        Connect
-      </button>
+      <button id="connect-btn" class="button is-primary is-medium is-fullwidth">Connect</button>
       <p id="login-error" class="help is-danger has-text-centered mt-3"></p>
     </div>
   </div>
 
-  <!--Main Code-->
+  <!-- Main Application -->
   <div id="app" class="is-hidden">
     <div class="columns is-gapless is-mobile app-container">
-
-      <!--Sidebar-->
+      
+      <!-- Sidebar -->
       <div class="column is-3-widescreen is-4-tablet sidebar">
+        
+        <!-- Users Panel -->
         <div class="sidebar-section">
-          <h2 class="title is-6 is-uppercase has-text-grey">Online Users</h2>
+          <h2 class="title is-6 is-uppercase has-text-grey">Users</h2>
           <ul id="online-users-list" class="user-list"></ul>
         </div>
 
+        <!-- My Chats Panel -->
         <div class="sidebar-section">
-          <h2 class="title is-6 is-uppercase has-text-grey">Conversations</h2>
+          <h2 class="title is-6 is-uppercase has-text-grey">My Chats</h2>
           
           <button id="new-conversation-btn" class="button is-primary is-small is-fullwidth mb-3">
-            <span class="icon"><i class="fas fa-plus"></i></span>
-            <span>New Conversation</span>
+            <span class="icon"><i class="fas fa-users"></i></span>
+            <span>New Group Chat</span>
           </button>
 
-          <div class="field has-addons mb-3">
-            <div class="control is-expanded">
-              <input id="join-conversation-input" class="input is-small" type="text" placeholder="Conversation ID" />
-            </div>
-            <div class="control">
-              <button id="join-conversation-btn" class="button is-info is-small">Join</button>
-            </div>
-          </div>
-
-          <ul id="conversation-tabs" class="conversation-list"></ul>
+          <ul id="my-chats-list" class="chat-list"></ul>
         </div>
       </div>
 
-      <!--Main panel-->
+      <!-- Main Chat Panel -->
       <div class="column main-panel">
         <div id="active-conversation-header" class="chat-header">
           <div>
-            <span id="active-conversation-title" class="title is-5 mb-0">No conversation selected</span>
+            <span id="active-conversation-title" class="title is-5 mb-0">Select a chat</span>
             <span id="active-conversation-members" class="is-size-7 has-text-grey ml-2"></span>
           </div>
           <button id="leave-conversation-btn" class="button is-danger is-small is-hidden">
@@ -94,7 +82,6 @@
           </div>
         </form>
       </div>
-
 
     </div>
   </div>

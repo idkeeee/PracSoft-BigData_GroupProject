@@ -1,10 +1,10 @@
 import { state, removeConversation } from './state.js';
 import { el, renderLoginError, renderAll } from './ui.js';
-import { connect, send, setActiveConversation, handleServerMessage } from './network.js';
+import { connect, send, setActiveConversation } from './network.js';
 
 window.state = state;
 window.send = send;
-window.setActiveConversation = setActiveConversation
+window.setActiveConversation = setActiveConversation;
 
 document.getElementById('connect-btn').addEventListener('click', () => {
   const username = el.usernameInput.value.trim();
@@ -20,20 +20,12 @@ document.getElementById('new-conversation-btn').addEventListener('click', () => 
   send({ type: 'create_conversation' });
 });
 
-document.getElementById('join-conversation-btn').addEventListener('click', () => {
-  const conversationId = el.joinInput.value.trim();
-  if (!conversationId) return;
-  send({ type: 'join_conversation', conversationId });
-  el.joinInput.value = '';
-});
-
 el.leaveBtn.addEventListener('click', () => {
   const id = state.activeConversationId;
   if (!id) return;
   send({ type: 'leave_conversation', conversationId: id });
   removeConversation(id);
-  renderConversationTabs();
-  renderActiveConversation();
+  renderAll();
 });
 
 el.messageForm.addEventListener('submit', (e) => {
