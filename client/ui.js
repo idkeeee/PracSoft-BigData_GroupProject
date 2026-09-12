@@ -1,4 +1,4 @@
-import { state } from './state.js'
+import { state } from './state.js';
 
 export const el = {
   loginScreen: document.getElementById('login-screen'),
@@ -6,13 +6,14 @@ export const el = {
   usernameInput: document.getElementById('username-input'),
   app: document.getElementById('app'),
   onlineUsersList: document.getElementById('online-users-list'),
-  myChatsList: document.getElementById('my-chats-list'),
   activeTitle: document.getElementById('active-conversation-title'),
   activeMembers: document.getElementById('active-conversation-members'),
   leaveBtn: document.getElementById('leave-conversation-btn'),
   messageHistory: document.getElementById('message-history'),
   messageForm: document.getElementById('message-input-form'),
   messageInput: document.getElementById('message-input'),
+  groupModal: document.getElementById('group-modal'),
+  groupMemberList: document.getElementById('group-member-list'),
 };
 
 export function renderLoginError(message) {
@@ -28,62 +29,48 @@ export function renderOnlineUsers(users, onlineUsersSet) {
   el.onlineUsersList.innerHTML = '';
   const safeUsers = Array.isArray(users) ? users : [];
   const safeSet = onlineUsersSet instanceof Set ? onlineUsersSet : new Set();
+
+  // Check if current active chat is a DM
+  const activeConvo = state.conversations.get(state.activeConversationId);
+  const isDmActive = activeConvo && activeConvo.members.length === 2;
+  const activeDmPartner = isDmActive ? activeConvo.members.find(m => m !== state.username) : null;
+
   for (const user of safeUsers) {
     const li = document.createElement('li');
     const isOnline = safeSet.has(user);
-    li.innerHTML = `<span class="status-dot ${isOnline ? 'online' : 'offline'}"></span> ${user} ${user === window.state.username ? 'you' : ''}`;
-    li.className = 'user-list-item';
-    li.dataset.username = user;
+    const isActive = user === activeDmPartner;
+    
+    li.innerHTML = `<span class="status-dot ${isOnline ? 'online' : 'offline'}"></span> ${user} ${user === state.username ? '(you)' : ''}`;
+    li.className = `user-list-item ${isActive ? 'active' : ''}`;
+    
     li.addEventListener('click', () => {
-        if (user !== state.username) {
-            window.send({ type: 'start_dm', targetUsername: user });
-        }
+      if (user !== state.username) {
+        window.send({ type: 'start_dm', targetUsername: user });
+      }
     });
+    
     el.onlineUsersList.appendChild(li);
   }
 }
 
-export function renderMyChats() {
-  el.myChatsList.innerHTML = '';
-
-  for (const [conversationId, convo] of state.conversations) {
-    const li = document.createElement('li');
-    const unread = window.state.unreadCounts.get(conversationId) || 0;
-    const badge = unread > 0 ? `<span class="unread-badge">${unread}</span>` : '';
-
-    let chatName = "Group Chat";
-
-    if (convo.members.length === 2) {
-      chatName = convo.members.find(m => m !== state.username) || "Unknown";
-    }
-
-    li.innerHTML = `<span>${chatName}</span> ${badge}`
-    li.className = conversationId === state.activeConversationId ? 'chat-item active' : 'chat-item';
-
-    li.addEventListener('click', () => window.setActiveConversation(conversationId));
-    el.myChatsList.appendChild(li);
-  }
-}
-
-
 export function renderActiveConversation() {
   const id = state.activeConversationId;
   if (!id) {
-    el.activeTitle.textContent = 'Select chat';
+    el.activeTitle.textContent = 'Select a user';
     el.activeMembers.textContent = '';
     el.leaveBtn.classList.add('is-hidden');
-    el.messageHistory.innerHTML = '<div class="has-text-centered has-text-grey mt-5">Select a user or chat to start messaging</div>';
+    el.messageHistory.innerHTML = '<div class="has-text-centered has-text-grey mt-5">Select a user from the sidebar to start messaging</div>';
     return;
   }
 
   const convo = state.conversations.get(id);
-
+  
   if (convo.members.length === 2) {
     el.activeTitle.textContent = convo.members.find(m => m !== state.username) || "Unknown";
   } else {
     el.activeTitle.textContent = "Group Chat";
   }
-
+  
   el.activeMembers.textContent = `Members: ${convo.members.join(', ')}`;
   el.leaveBtn.classList.remove('is-hidden');
 
@@ -104,9 +91,24 @@ export function renderActiveConversation() {
   el.messageHistory.scrollTop = el.messageHistory.scrollHeight;
 }
 
-
 export function renderAll() {
-  renderOnlineUsers();
-  renderMyChats();
+  renderOnlineUsers(window.allUsers || [], state.onlineUsers);
   renderActiveConversation();
+}
+
+export function renderGroupModal(users) {
+  el.groupMemberList.innerHTML = '';
+  const safeUsers = Array.isArray(users) ? users : [];
+  
+  for (const user of safeUsers) {
+    if (user === state.username) continue;
+    
+    const div = document.createElement('div');
+    div.className = 'group-member-item';
+    div.innerHTML = `
+      <input type="checkbox" id="user-${user}" value="${user}">
+      <label for="user-${user}">${user}</label>
+    `;
+    el.groupMemberList.appendChild(div);
+  }
 }

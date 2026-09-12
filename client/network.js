@@ -1,5 +1,5 @@
-import { state, addOrUpdateConversation, appendMessage, removeConversation, incrementUnread, clearUnread } from './state.js';
-import { renderLoginError, renderLoggedIn, renderOnlineUsers, renderMyChats, renderActiveConversation, renderAll } from './ui.js';
+import { state, addOrUpdateConversation, appendMessage, removeConversation } from './state.js';
+import { renderLoginError, renderLoggedIn, renderOnlineUsers, renderActiveConversation, renderAll } from './ui.js';
 
 let ws = null;
 
@@ -79,18 +79,14 @@ export function handleServerMessage(data) {
 
     case 'member_update':
       addOrUpdateConversation(data.conversationId, { members: data.members });
-      renderMyChats();
       renderActiveConversation();
+      renderOnlineUsers(window.allUsers || [], state.onlineUsers);
       break;
 
     case 'new_message':
       appendMessage(data.conversationId, data);
       if (data.conversationId === state.activeConversationId) {
-        clearUnread(data.conversationId);
         renderActiveConversation();
-      } else {
-        incrementUnread(data.conversationId);
-        renderMyChats(); // Update unread badge in the sidebar
       }
       break;
 
@@ -101,7 +97,6 @@ export function handleServerMessage(data) {
 
 export function setActiveConversation(conversationId) {
   state.activeConversationId = conversationId;
-  clearUnread(conversationId);
-  renderMyChats();
   renderActiveConversation();
+  renderOnlineUsers(window.allUsers || [], state.onlineUsers);
 }

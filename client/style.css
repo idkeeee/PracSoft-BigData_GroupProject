@@ -202,30 +202,99 @@ html, body {
   margin-bottom: 0;
 }
 
-/* =========================================
-   7. Message History & Bubbles
-   ========================================= */
+/* Message History & Bubbles */
 .message-history {
   flex: 1;
   overflow-y: auto;
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .message {
-  max-width: 65%;
+  max-width: 70%;
   padding: 0.75rem 1rem;
   border-radius: 12px;
   position: relative;
   word-wrap: break-word;
+  overflow-wrap: break-word;
+  display: flex;
+  flex-direction: column;
   animation: fadeIn 0.2s ease-out;
 }
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(5px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* Received Messages */
+.message-received {
+  align-self: flex-start;
+  background-color: #ffffff;
+  border: 1px solid #e0e6ed;
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.message-received .sender {
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: #3273dc;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.message-received .time {
+  font-size: 0.7rem;
+  color: #a0aec0;
+  margin-top: 4px;
+  text-align: right;
+}
+
+.message-received .content {
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: #363636;
+  margin-top: 2px;
+}
+
+/* Sent Messages */
+.message-sent {
+  align-self: flex-end;
+  background-color: #3273dc;
+  color: #ffffff;
+  border-bottom-right-radius: 4px;
+  box-shadow: 0 2px 6px rgba(50, 115, 220, 0.25);
+}
+
+.message-sent .sender {
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: #e8f0fe;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.message-sent .time {
+  font-size: 0.7rem;
+  color: #b3d4ff;
+  margin-top: 4px;
+  text-align: right;
+}
+
+.message-sent .content {
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: #ffffff;
+  margin-top: 2px;
 }
 
 /* Received Messages */
@@ -343,4 +412,40 @@ html, body {
 .message-history::-webkit-scrollbar-thumb:hover,
 .sidebar-section::-webkit-scrollbar-thumb:hover {
   background-color: #a0aec0;
+}
+/* Active User Highlight in Sidebar */
+.user-list-item.active {
+  background-color: #e8f0fe;
+  color: #3273dc;
+  font-weight: 600;
+  border-left: 3px solid #3273dc;
+}
+
+/* Group Chat Modal Styles */
+.modal.is-hidden {
+  display: none !important;
+}
+
+.group-member-list {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #e0e6ed;
+  border-radius: 8px;
+  padding: 0.5rem;
+}
+
+.group-member-item {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.group-member-item:hover {
+  background-color: #f5f7fa;
+}
+
+.group-member-item input {
+  margin-right: 10px;
 }

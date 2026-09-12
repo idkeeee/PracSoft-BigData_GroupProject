@@ -153,9 +153,10 @@ async function handleJoinConversation(ws, data) {
 
     conversations.get(conversationId).add(ws.username);
 
+    // 1. Fetch messages WITHOUT the join
     const { data: history, error } = await supabase
         .from('messages')
-        .select('content, created_at, users!sender_id (username)')
+        .select('id, content, created_at, sender_id')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true });
 
@@ -165,8 +166,25 @@ async function handleJoinConversation(ws, data) {
         return;
     }
 
-    const formattedHistory = history.map(msg => ({
-        senderId: msg.users ? msg.users.username : 'Unknown',
+    // 2. Collect all unique sender IDs
+    const senderIds = [...new Set((history || []).map(m => m.sender_id))];
+    
+    // 3. Fetch usernames for those IDs
+    let userMap = new Map();
+    if (senderIds.length > 0) {
+        const { data: users } = await supabase
+            .from('users')
+            .select('id, username')
+            .in('id', senderIds);
+            
+        if (users) {
+            userMap = new Map(users.map(u => [u.id, u.username]));
+        }
+    }
+
+    // 4. Map messages with correct usernames
+    const formattedHistory = (history || []).map(msg => ({
+        senderId: userMap.get(msg.sender_id) || 'Unknown',
         content: msg.content,
         created_at: msg.created_at
     }));
@@ -267,40 +285,6 @@ async function handleSendMessage(ws, data) {
     }
 }
 
-async function handleFetchHistory(ws, data) {
-    if (!requireRegistered(ws)) return;
-    const { conversationId } = data;
-
-    // Use default conversation if none is provided
-    const targetConversation = conversationId || '10bd6650-3ae5-4a44-803e-c16c80ca4611';
-
-    const { data: history, error } = await supabase
-        .from('messages')
-        .select('content, created_at, users!sender_id (username)')
-        .eq('conversation_id', targetConversation)
-        .order('created_at', { ascending: true })
-        .limit(50);
-    
-    if (error) {
-        console.error('History fetch error:', error);
-        sendError(ws, 'Failed to load history.');
-        return;
-    }
-
-    const formattedHistory = history.map(msg => ({
-        type: 'message',
-        from: msg.users.username,
-        message: msg.content,
-        timestamp: msg.created_at,
-        isHistory: true
-    }));
-
-    send(ws, { 
-        type: 'history', 
-        messages: formattedHistory 
-    });
-}
-
 async function handleStartDM(ws, data) {
     if (!requireRegistered(ws)) return;
     const { targetUsername } = data;
@@ -354,12 +338,26 @@ async function handleStartDM(ws, data) {
         conversations.set(existingConversationId, new Set([ws.username, targetUsername]));
         const { data: history } = await supabase
             .from('messages')
-            .select(`content, created_at, users!sender_id (username)`)
+            .select(`content, created_at, sender_id`)
             .eq('conversation_id', existingConversationId)
             .order('created_at', { ascending: true });
+
+        const senderIds = [...new Set((history || []).map(m => m.sender_id))];
+        let userMap = new Map();
+
+        if (senderIds.length > 0) {
+            const { data: users } = await supabase
+                .from('users')
+                .select('id, username')
+                .in('id', senderIds);
+                
+            if (users) {
+                userMap = new Map(users.map(u => [u.id, u.username]));
+            }
+        }
             
         const formattedHistory = (history || []).map(msg => ({
-            senderId: msg.users ? msg.users.username : 'Unknown',
+            senderId: userMap.get(msg.sender_id) || 'Unknown',
             content: msg.content,
             created_at: msg.created_at
         }));
@@ -402,6 +400,73 @@ async function handleStartDM(ws, data) {
     }
 }
 
+async function handleCreateGroup(ws, data) {
+    if (!requireRegistered(ws)) return;
+    const { members: targetUsernames } = data;
+
+    if (!Array.isArray(targetUsernames) || targetUsernames.length === 0) {
+        sendError(ws, 'Invalid group members.');
+        return;
+    }
+
+    const currentUserData = clients.get(ws.username);
+    const allUsernames = [ws.username, ...targetUsernames];
+    const allUserIds = [currentUserData.id];
+
+    // Fetch database IDs for all selected users
+    const { data: targetUsers, error: targetError } = await supabase
+        .from('users')
+        .select('id, username')
+        .in('username', targetUsernames);
+
+    if (targetError || !targetUsers) {
+        sendError(ws, 'Failed to find users.');
+        return;
+    }
+
+    for (const user of targetUsers) {
+        allUserIds.push(user.id);
+    }
+
+    // Create the new conversation
+    const { data: newRow, error: createError } = await supabase
+        .from('conversations')
+        .insert([{}])
+        .select()
+        .single();
+    
+    if (createError) {
+        console.error('Supabase error creating group:', createError);
+        sendError(ws, 'Failed to create group.');
+        return;
+    }
+
+    const newConvoId = newRow.id;
+
+    // Add all members to the database
+    const memberInserts = allUserIds.map(userId => ({
+        conversation_id: newConvoId,
+        user_id: userId
+    }));
+
+    await supabase
+        .from('conversation_members')
+        .insert(memberInserts);
+
+    // Track in server memory
+    conversations.set(newConvoId, new Set(allUsernames));
+    
+    // Notify the creator
+    send(ws, { 
+        type: 'conversation_created', 
+        conversationId: newConvoId,
+        members: allUsernames,
+        history: [] 
+    });
+
+    broadcastMemberUpdate(newConvoId);
+}
+
 module.exports = {
     clients,
     conversations,
@@ -415,5 +480,6 @@ module.exports = {
     handleJoinConversation,
     handleLeaveConversation,
     handleSendMessage,
-    handleStartDM
+    handleStartDM,
+    handleCreateGroup
 };

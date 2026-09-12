@@ -15,6 +15,7 @@ const {
     handleLeaveConversation,
     handleSendMessage,
     handleStartDM,
+    handleCreateGroup
 } = require('./handler');
 
 const app = express();
@@ -58,6 +59,9 @@ wss.on('connection', (ws) => {
                     break;
                 case 'start_dm': 
                     await handleStartDM(ws, data); 
+                    break;
+                case 'create_group':
+                    await handleCreateGroup(ws, data);
                     break;
                 default:
                     sendError(ws, `Unknown message type: ${data.type}`);

@@ -34,23 +34,13 @@
       
       <!-- Sidebar -->
       <div class="column is-3-widescreen is-4-tablet sidebar">
-        
-        <!-- Users Panel -->
         <div class="sidebar-section">
           <h2 class="title is-6 is-uppercase has-text-grey">Users</h2>
-          <ul id="online-users-list" class="user-list"></ul>
-        </div>
-
-        <!-- My Chats Panel -->
-        <div class="sidebar-section">
-          <h2 class="title is-6 is-uppercase has-text-grey">My Chats</h2>
-          
-          <button id="new-conversation-btn" class="button is-primary is-small is-fullwidth mb-3">
+          <button id="new-group-chat-btn" class="button is-primary is-small is-fullwidth mb-3">
             <span class="icon"><i class="fas fa-users"></i></span>
             <span>New Group Chat</span>
           </button>
-
-          <ul id="my-chats-list" class="chat-list"></ul>
+          <ul id="online-users-list" class="user-list"></ul>
         </div>
       </div>
 
@@ -58,7 +48,7 @@
       <div class="column main-panel">
         <div id="active-conversation-header" class="chat-header">
           <div>
-            <span id="active-conversation-title" class="title is-5 mb-0">Select a chat</span>
+            <span id="active-conversation-title" class="title is-5 mb-0">Select a user</span>
             <span id="active-conversation-members" class="is-size-7 has-text-grey ml-2"></span>
           </div>
           <button id="leave-conversation-btn" class="button is-danger is-small is-hidden">
@@ -83,6 +73,25 @@
         </form>
       </div>
 
+    </div>
+  </div>
+
+  <!-- Group Chat Modal -->
+  <div id="group-modal" class="modal is-hidden">
+    <div class="modal-background" id="modal-background"></div>
+    <div class="modal-card">
+      <header class="modal-card-head">
+        <p class="modal-card-title">Create Group Chat</p>
+        <button class="delete" id="close-modal-btn" aria-label="close"></button>
+      </header>
+      <section class="modal-card-body">
+        <p class="mb-3">Select members to invite:</p>
+        <div id="group-member-list" class="group-member-list"></div>
+      </section>
+      <footer class="modal-card-foot">
+        <button id="confirm-group-btn" class="button is-success">Create Group</button>
+        <button class="button" id="cancel-modal-btn">Cancel</button>
+      </footer>
     </div>
   </div>
 
