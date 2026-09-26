@@ -493,3 +493,103 @@ html, body {
 .group-member-item input {
   margin-right: 10px;
 }
+
+/* =========================================
+   9. Search
+   ========================================= */
+.sidebar-search-field {
+  flex-shrink: 0;
+  margin-bottom: 0.75rem;
+}
+
+.sidebar-search-field .input,
+.message-search-input-wrap .input {
+  border-color: #e0e6ed;
+  box-shadow: none;
+}
+
+.sidebar-search-field .input:focus,
+.message-search-input-wrap .input:focus {
+  border-color: #3273dc;
+  box-shadow: 0 0 0 2px rgba(50, 115, 220, 0.1);
+}
+
+.sidebar-item-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-search-empty {
+  padding: 0.8rem 0.75rem;
+  color: #a0aec0;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.chat-header-title-wrap {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.chat-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: 1rem;
+}
+
+.message-search-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.message-search-input-wrap {
+  width: min(260px, 24vw);
+}
+
+.message-search-count {
+  min-width: 2.8rem;
+  text-align: center;
+  color: #7a7a7a;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.message.search-match {
+  outline: 2px solid rgba(255, 221, 87, 0.9);
+  outline-offset: 2px;
+}
+
+.message.search-match-current {
+  outline: 3px solid #ffb70f;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px rgba(255, 183, 15, 0.18);
+}
+
+@media (max-width: 900px) {
+  .chat-header {
+    align-items: flex-start;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .chat-header-actions {
+    width: 100%;
+    margin-left: 0;
+    justify-content: space-between;
+  }
+
+  .message-search-controls {
+    flex: 1;
+  }
+
+  .message-search-input-wrap {
+    width: auto;
+    flex: 1;
+  }
+}

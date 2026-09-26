@@ -1,5 +1,15 @@
 import { state, removeConversation } from './state.js';
-import { el, renderLoginError, renderAll, renderGroupModal, closeInviteModal } from './ui.js';
+import {
+  el,
+  renderLoginError,
+  renderAll,
+  renderGroupModal,
+  closeInviteModal,
+  setSidebarSearchQuery,
+  setMessageSearchQuery,
+  moveMessageSearch,
+  clearMessageSearch
+} from './ui.js';
 import { connect, send, setActiveConversation, setRequestedTarget, setRequestedGroupId } from './network.js';
 import { generateKey, exportKey, encryptText } from './crypto.js';
 
@@ -17,6 +27,50 @@ let isLoginMode = true;
 let typingTimeout = null;
 let isCurrentlyTyping = false;
 let typingConversationId = null;
+
+// Search users, DMs, and group chats in the sidebar.
+if (el.sidebarSearchInput) {
+  el.sidebarSearchInput.addEventListener('input', () => {
+    setSidebarSearchQuery(el.sidebarSearchInput.value);
+  });
+
+  el.sidebarSearchInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      el.sidebarSearchInput.value = '';
+      setSidebarSearchQuery('');
+      el.sidebarSearchInput.blur();
+    }
+  });
+}
+
+// Search the already-loaded, decrypted messages in the active conversation.
+if (el.messageSearchInput) {
+  el.messageSearchInput.addEventListener('input', () => {
+    setMessageSearchQuery(el.messageSearchInput.value);
+  });
+
+  el.messageSearchInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      moveMessageSearch(event.shiftKey ? -1 : 1);
+    } else if (event.key === 'Escape') {
+      clearMessageSearch();
+      el.messageSearchInput.blur();
+    }
+  });
+}
+
+if (el.messageSearchPrev) {
+  el.messageSearchPrev.addEventListener('click', () => moveMessageSearch(-1));
+}
+
+if (el.messageSearchNext) {
+  el.messageSearchNext.addEventListener('click', () => moveMessageSearch(1));
+}
+
+if (el.messageSearchClear) {
+  el.messageSearchClear.addEventListener('click', clearMessageSearch);
+}
 
 function stopTyping() {
   clearTimeout(typingTimeout);
