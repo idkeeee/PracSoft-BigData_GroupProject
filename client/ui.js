@@ -21,8 +21,174 @@ export const el = {
   groupMemberList: document.getElementById('group-member-list'),
   inviteModal: document.getElementById('invite-modal'),
   inviteModalBody: document.getElementById('invite-modal-body'),
-  typingIndicator: document.getElementById('typing-indicator') || null
+  typingIndicator: document.getElementById('typing-indicator') || null,
+  attachmentInput: document.getElementById('attachment-input'),
+  attachFileBtn: document.getElementById('attach-file-btn'),
+  uploadStatus: document.getElementById('upload-status')
 };
+
+const ATTACHMENT_PREFIX = '[[ATTACHMENT_V1]]';
+
+function parseAttachment(content) {
+  if (typeof content !== 'string' || !content.startsWith(ATTACHMENT_PREFIX)) return null;
+  try {
+    const item = JSON.parse(content.slice(ATTACHMENT_PREFIX.length));
+    if (!item || typeof item.url !== 'string' || typeof item.name !== 'string') return null;
+    return {
+      name: item.name,
+      mime: typeof item.mime === 'string' ? item.mime : 'application/octet-stream',
+      size: Number(item.size) || 0,
+      url: item.url
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+function formatBytes(bytes) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return 'Unknown size';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  return `${value >= 10 || unit === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[unit]}`;
+}
+
+function appendLinkifiedText(container, text) {
+  const source = String(text || '');
+  const regex = /https?:\/\/[^\s<]+/gi;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regex.exec(source)) !== null) {
+    if (match.index > lastIndex) {
+      container.appendChild(document.createTextNode(source.slice(lastIndex, match.index)));
+    }
+
+    // Avoid swallowing sentence punctuation into the URL.
+    let url = match[0];
+    let trailing = '';
+    while (/[),.!?;:]$/.test(url)) {
+      trailing = url.slice(-1) + trailing;
+      url = url.slice(0, -1);
+    }
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.textContent = url;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.className = 'message-link';
+    container.appendChild(link);
+
+    if (trailing) container.appendChild(document.createTextNode(trailing));
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < source.length) {
+    container.appendChild(document.createTextNode(source.slice(lastIndex)));
+  }
+}
+
+function showAttachmentExpired(container, attachment) {
+  container.innerHTML = '';
+  const expired = document.createElement('div');
+  expired.className = 'attachment-expired';
+  expired.innerHTML = '<i class="fas fa-triangle-exclamation"></i><span></span>';
+  expired.querySelector('span').textContent = `${attachment.name} — attachment expired / removed to save storage`;
+  container.appendChild(expired);
+}
+
+function renderAttachment(container, attachment) {
+  container.classList.add('attachment-content');
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'attachment-card';
+
+  const mime = attachment.mime.toLowerCase();
+  const isImage = mime.startsWith('image/');
+  const isVideo = mime.startsWith('video/');
+  const isAudio = mime.startsWith('audio/');
+
+  if (isImage) {
+    const link = document.createElement('a');
+    link.href = attachment.url;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+
+    const img = document.createElement('img');
+    img.className = 'attachment-image';
+    img.src = attachment.url;
+    img.alt = attachment.name;
+    img.loading = 'lazy';
+    img.addEventListener('error', () => showAttachmentExpired(container, attachment), { once: true });
+    link.appendChild(img);
+    wrapper.appendChild(link);
+  } else if (isVideo) {
+    const video = document.createElement('video');
+    video.className = 'attachment-video';
+    video.src = attachment.url;
+    video.controls = true;
+    video.preload = 'metadata';
+    video.addEventListener('error', () => showAttachmentExpired(container, attachment), { once: true });
+    wrapper.appendChild(video);
+  } else if (isAudio) {
+    const audio = document.createElement('audio');
+    audio.className = 'attachment-audio';
+    audio.src = attachment.url;
+    audio.controls = true;
+    audio.preload = 'metadata';
+    audio.addEventListener('error', () => showAttachmentExpired(container, attachment), { once: true });
+    wrapper.appendChild(audio);
+  }
+
+  const meta = document.createElement('div');
+  meta.className = 'attachment-meta';
+
+  const icon = document.createElement('span');
+  icon.className = 'attachment-file-icon';
+  icon.innerHTML = `<i class="fas ${isImage ? 'fa-image' : isVideo ? 'fa-film' : isAudio ? 'fa-music' : 'fa-file'}"></i>`;
+
+  const details = document.createElement('div');
+  details.className = 'attachment-details';
+  const name = document.createElement('div');
+  name.className = 'attachment-name';
+  name.textContent = attachment.name;
+  const size = document.createElement('div');
+  size.className = 'attachment-size';
+  size.textContent = formatBytes(attachment.size);
+  details.appendChild(name);
+  details.appendChild(size);
+
+  const download = document.createElement('a');
+  download.className = 'attachment-download button is-small is-light';
+  download.href = `${attachment.url}?download=1&name=${encodeURIComponent(attachment.name)}`;
+  download.title = 'Download file';
+  download.innerHTML = '<span class="icon is-small"><i class="fas fa-download"></i></span>';
+
+  meta.appendChild(icon);
+  meta.appendChild(details);
+  meta.appendChild(download);
+  wrapper.appendChild(meta);
+  container.appendChild(wrapper);
+}
+
+function searchableMessageText(content) {
+  const attachment = parseAttachment(content);
+  return attachment ? attachment.name : String(content || '');
+}
+
+function renderMessageContent(container, content) {
+  const attachment = parseAttachment(content);
+  if (attachment) {
+    renderAttachment(container, attachment);
+  } else {
+    appendLinkifiedText(container, content);
+  }
+}
 
 let sidebarSearchQuery = '';
 let messageSearchQuery = '';
@@ -232,7 +398,7 @@ export function renderActiveConversation() {
 
   if (query) {
     convo.messages.forEach((msg, index) => {
-      if (normalize(msg.content).includes(query)) {
+      if (normalize(searchableMessageText(msg.content)).includes(query)) {
         messageSearchMatches.push(index);
       }
     });
@@ -272,7 +438,7 @@ export function renderActiveConversation() {
     `;
     div.querySelector('.sender').textContent = msg.senderId;
     div.querySelector('.time').textContent = new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    div.querySelector('.content').textContent = msg.content;
+    renderMessageContent(div.querySelector('.content'), msg.content);
     el.messageHistory.appendChild(div);
   });
 

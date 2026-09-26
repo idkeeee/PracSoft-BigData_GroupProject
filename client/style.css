@@ -601,3 +601,126 @@ html, body {
     flex: 1;
   }
 }
+
+
+/* =========================================
+   10. Attachments & Links
+   ========================================= */
+.chat-compose-row {
+  margin-bottom: 0.25rem !important;
+}
+
+#attach-file-btn {
+  min-width: 2.7rem;
+}
+
+.upload-status {
+  min-height: 1.1rem;
+  padding-left: 0.35rem;
+  color: #7a7a7a;
+  font-size: 0.72rem;
+}
+
+.upload-status.is-error {
+  color: #f14668;
+}
+
+.message-link {
+  color: inherit;
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+}
+
+.message-received .message-link {
+  color: #3273dc;
+}
+
+.message-sent .message-link {
+  color: #ffffff;
+}
+
+.attachment-content {
+  width: min(440px, 60vw);
+}
+
+.attachment-card {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+.attachment-image,
+.attachment-video {
+  display: block;
+  width: 100%;
+  max-height: 360px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.attachment-audio {
+  display: block;
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+.attachment-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+  padding-top: 0.55rem;
+}
+
+.attachment-file-icon {
+  flex: 0 0 auto;
+  font-size: 1.15rem;
+}
+
+.attachment-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.attachment-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.attachment-size {
+  font-size: 0.68rem;
+  opacity: 0.72;
+}
+
+.attachment-download {
+  flex: 0 0 auto;
+}
+
+.message-sent .attachment-download {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: transparent;
+  color: #ffffff;
+}
+
+.attachment-expired {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  opacity: 0.82;
+}
+
+@media (max-width: 700px) {
+  .attachment-content {
+    width: min(70vw, 360px);
+  }
+
+  .attachment-image,
+  .attachment-video {
+    max-height: 280px;
+  }
+}
