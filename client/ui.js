@@ -136,6 +136,19 @@ export function renderOnlineUsers(users, onlineUsersSet) {
 
     li.innerHTML = statusHtml;
     li.appendChild(titleSpan);
+
+    const unreadCount = state.unreadCounts.get(id) || 0;
+    if (unreadCount > 0) {
+      li.classList.add('has-unread');
+
+      const unreadBadge = document.createElement('span');
+      unreadBadge.className = 'unread-badge';
+      unreadBadge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
+      unreadBadge.title = `${unreadCount} unread message${unreadCount === 1 ? '' : 's'}`;
+      unreadBadge.setAttribute('aria-label', unreadBadge.title);
+      li.appendChild(unreadBadge);
+    }
+
     li.addEventListener('click', () => window.setActiveConversation(id));
     el.onlineUsersList.appendChild(li);
     renderedCount += 1;
